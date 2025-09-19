@@ -1,395 +1,228 @@
-# Splunk MCP (Model Context Protocol) Tool
+# Splunk to CSV Converter
 
-A FastMCP-based tool for interacting with Splunk Enterprise/Cloud through natural language. This tool provides a set of capabilities for searching Splunk data, managing KV stores, and accessing Splunk resources through an intuitive interface.
-
-## Operating Modes
-
-The tool operates in three modes:
-
-1. **SSE Mode** (Default)
-   - Server-Sent Events based communication
-   - Real-time bidirectional interaction
-   - Suitable for web-based MCP clients
-   - Default mode when no arguments provided
-   - Access via `/sse` endpoint
-
-2. **API Mode**
-   - RESTful API endpoints
-   - Access via `/api/v1` endpoint prefix
-   - Start with `python splunk_mcp.py api`
-
-3. **STDIO Mode**
-   - Standard input/output based communication
-   - Compatible with Claude Desktop and other MCP clients
-   - Ideal for direct integration with AI assistants
-   - Start with `python splunk_mcp.py stdio`
+A powerful Python tool for converting Splunk search results to CSV format. This tool supports any Splunk search query and can handle various data formats automatically.
 
 ## Features
 
-- **Splunk Search**: Execute Splunk searches with natural language queries
-- **Index Management**: List and inspect Splunk indexes
-- **User Management**: View and manage Splunk users
-- **KV Store Operations**: Create, list, and manage KV store collections
-- **Async Support**: Built with async/await patterns for better performance
-- **Detailed Logging**: Comprehensive logging with emoji indicators for better visibility
-- **SSL Configuration**: Flexible SSL verification options for different security requirements
-- **Enhanced Debugging**: Detailed connection and error logging for troubleshooting
-- **Comprehensive Testing**: Unit tests covering all major functionality
-- **Error Handling**: Robust error handling with appropriate status codes
-- **SSE Compliance**: Fully compliant with MCP SSE specification
-
-## Available MCP Tools
-
-The following tools are available via the MCP interface:
-
-### Tools Management
-- **list_tools**
-  - Lists all available MCP tools with their descriptions and parameters
-
-### Health Check
-- **health_check**
-  - Returns a list of available Splunk apps to verify connectivity
-- **ping**
-  - Simple ping endpoint to verify MCP server is alive
-
-### User Management
-- **current_user**
-  - Returns information about the currently authenticated user
-- **list_users**
-  - Returns a list of all users and their roles
-
-### Index Management
-- **list_indexes**
-  - Returns a list of all accessible Splunk indexes
-- **get_index_info**
-  - Returns detailed information about a specific index
-  - Parameters: index_name (string)
-- **indexes_and_sourcetypes**
-  - Returns a comprehensive list of indexes and their sourcetypes
-
-### Search
-- **search_splunk**
-  - Executes a Splunk search query
-  - Parameters: 
-    - search_query (string): Splunk search string
-    - earliest_time (string, optional): Start time for search window
-    - latest_time (string, optional): End time for search window
-    - max_results (integer, optional): Maximum number of results to return
-- **list_saved_searches**
-  - Returns a list of saved searches in the Splunk instance
-
-### KV Store
-- **list_kvstore_collections**
-  - Lists all KV store collections
-- **create_kvstore_collection**
-  - Creates a new KV store collection
-  - Parameters: collection_name (string)
-- **delete_kvstore_collection**
-  - Deletes an existing KV store collection
-  - Parameters: collection_name (string)
-
-## SSE Endpoints
-
-When running in SSE mode, the following endpoints are available:
-
-- **/sse**: Returns SSE connection information in text/event-stream format
-  - Provides metadata about the SSE connection
-  - Includes URL for the messages endpoint
-  - Provides protocol and capability information
-
-- **/sse/messages**: The main SSE stream endpoint
-  - Streams system events like heartbeats
-  - Maintains persistent connection
-  - Sends properly formatted SSE events
-
-- **/sse/health**: Health check endpoint for SSE mode
-  - Returns status and version information in SSE format
-
-## Error Handling
-
-The MCP implementation includes consistent error handling:
-
-- Invalid search commands or malformed requests
-- Insufficient permissions
-- Resource not found
-- Invalid input validation
-- Unexpected server errors
-- Connection issues with Splunk server
-
-All error responses include a detailed message explaining the error.
+- 🔍 **Universal Search Support** - Works with any Splunk query (searches, stats, REST API calls, etc.)
+- 📊 **Automatic Data Normalization** - Handles different data types and formats automatically
+- 🎯 **Smart Field Ordering** - Prioritizes common fields like _time, user, action, etc.
+- 📁 **Excel Compatible** - Outputs UTF-8 with BOM for perfect Excel compatibility
+- 👀 **Preview Mode** - View data before saving to file
+- ⚙️ **Flexible Configuration** - Support for both username/password and token authentication
+- 🚀 **High Performance** - Can handle large datasets efficiently
 
 ## Installation
 
-### Using UV (Recommended)
-
-UV is a fast Python package installer and resolver, written in Rust. It's significantly faster than pip and provides better dependency resolution.
-
-#### Prerequisites
-- Python 3.10 or higher
-- UV installed (see [UV installation guide](https://docs.astral.sh/uv/getting-started/installation/))
-
-#### Quick Start with UV
-
-1. **Clone the repository:**
+1. **Clone or download the project**
+2. **Install dependencies**:
    ```bash
-   git clone <repository-url>
-   cd splunk-mcp
+   pip install requests splunk-sdk python-decouple
+   ```
+   Or if using the project's virtual environment:
+   ```bash
+   .\venv\Scripts\activate
+   pip install -e .
    ```
 
-2. **Install dependencies with UV:**
-   ```bash
-   # Install main dependencies
-   uv sync
-   
-   # Or install with development dependencies
-   uv sync --extra dev
-   ```
+## Configuration
 
-3. **Run the application:**
-   ```bash
-   # SSE mode (default)
-   uv run python splunk_mcp.py
-   
-   # STDIO mode
-   uv run python splunk_mcp.py stdio
-   
-   # API mode
-   uv run python splunk_mcp.py api
-   ```
-
-#### UV Commands Reference
+Set up your Splunk connection using environment variables:
 
 ```bash
-# Install dependencies
-uv sync
+# Basic configuration
+set SPLUNK_HOST=localhost
+set SPLUNK_PORT=8089
+set SPLUNK_USERNAME=admin
+set SPLUNK_PASSWORD=your_password
+set SPLUNK_SCHEME=https
+set VERIFY_SSL=false
 
-# Install with development dependencies
-uv sync --extra dev
-
-# Run the application
-uv run python splunk_mcp.py
-
-# Run tests
-uv run pytest
-
-# Run with specific Python version
-uv run --python 3.11 python splunk_mcp.py
-
-# Add a new dependency
-uv add fastapi
-
-# Add a development dependency
-uv add --dev pytest
-
-# Update dependencies
-uv sync --upgrade
-
-# Generate requirements.txt
-uv pip compile pyproject.toml -o requirements.txt
+# For token-based authentication (optional)
+set SPLUNK_TOKEN=your_token_here
 ```
 
-### Using Poetry (Alternative)
+## Quick Start
 
-If you prefer Poetry, you can still use it:
+### Using the Interactive Tool
 
+Run the interactive batch file for easy access:
 ```bash
-# Install dependencies
-poetry install
-
-# Run the application
-poetry run python splunk_mcp.py
+convert_splunk_data.bat
 ```
 
-### Using pip (Alternative)
+### Command Line Usage
 
+Basic search export:
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application
-python splunk_mcp.py
+python splunk_to_csv.py --query "index=_audit" --output audit_data.csv
 ```
 
-## Operating Modes
-
-The tool operates in three modes:
-
-1. **SSE Mode** (Default)
-   - Server-Sent Events based communication
-   - Real-time bidirectional interaction
-   - Suitable for web-based MCP clients
-   - Default mode when no arguments provided
-   - Access via `/sse` endpoint
-
-2. **API Mode**
-   - RESTful API endpoints
-   - Access via `/api/v1` endpoint prefix
-   - Start with `python splunk_mcp.py api`
-
-3. **STDIO Mode**
-   - Standard input/output based communication
-   - Compatible with Claude Desktop and other MCP clients
-   - Ideal for direct integration with AI assistants
-   - Start with `python splunk_mcp.py stdio`
-
-## Usage
-
-### Local Usage
-
-The tool can run in three modes:
-
-1. SSE mode (default for MCP clients):
+Statistics export:
 ```bash
-# Start in SSE mode (default)
-poetry run python splunk_mcp.py
-# or explicitly:
-poetry run python splunk_mcp.py sse
-
-# Use uvicorn directly:
-SERVER_MODE=api poetry run uvicorn splunk_mcp:app --host 0.0.0.0 --port 8000 --reload
+python splunk_to_csv.py --query "index=* | stats count by sourcetype" --output sourcetype_stats.csv
 ```
 
-3. STDIO mode:
+Preview mode (no file saved):
 ```bash
-poetry run python splunk_mcp.py stdio
+python splunk_to_csv.py --query "index=_internal | head 10" --preview
 ```
 
-### Docker Usage
-
-The project supports both the new `docker compose` (V2) and legacy `docker-compose` (V1) commands. The examples below use V2 syntax, but both are supported.
-
-1. SSE Mode (Default):
+Custom time range:
 ```bash
-docker compose up -d mcp
+python splunk_to_csv.py --query "search error" --time-range "-7d,now" --max-results 5000 --output errors_week.csv
 ```
 
-2. API Mode:
+## Command Line Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--query` | `-q` | Splunk search query (required) | - |
+| `--output` | `-o` | Output CSV file path | Auto-generated |
+| `--time-range` | `-t` | Time range (earliest,latest) | `-24h,now` |
+| `--max-results` | `-m` | Maximum number of results | `10000` |
+| `--encoding` | `-e` | CSV file encoding | `utf-8-sig` |
+| `--preview` | `-p` | Preview only, don't save file | `false` |
+| `--preview-rows` | | Number of preview rows | `5` |
+
+## Usage Examples
+
+### 1. Audit Log Export
 ```bash
-docker compose run --rm mcp python splunk_mcp.py api
+python splunk_to_csv.py --query "index=_audit" --max-results 1000 --output audit_1000.csv
 ```
 
-3. STDIO Mode:
+### 2. User Activity Analysis
 ```bash
-docker compose run -i --rm mcp python splunk_mcp.py stdio
+python splunk_to_csv.py --query "index=_audit | stats count by user action | sort -count" --output user_activity.csv
 ```
 
-### Testing with Docker
-
-The project includes a dedicated test environment in Docker:
-
-1. Run all tests:
+### 3. Index Statistics
 ```bash
-./run_tests.sh --docker
+python splunk_to_csv.py --query "| rest /services/data/indexes | table title totalEventCount currentDBSizeMB" --output index_stats.csv
 ```
 
-2. Run specific test components:
+### 4. Error Log Analysis
 ```bash
-# Run only the MCP server
-docker compose up -d mcp
-
-# Run only the test container
-docker compose up test
-
-# Run both with test results
-docker compose up --abort-on-container-exit
+python splunk_to_csv.py --query "search error OR failed OR exception" --time-range "-7d,now" --output errors_7days.csv
 ```
 
-Test results will be available in the `./test-results` directory.
-
-### Docker Development Tips
-
-1. **Building Images**:
+### 5. Custom REST API Query
 ```bash
-# Build both images
-docker compose build
-
-# Build specific service
-docker compose build mcp
-docker compose build test
+python splunk_to_csv.py --query "| rest /services/server/info" --output server_info.csv
 ```
 
-2. **Viewing Logs**:
+### 6. Preview Large Dataset
 ```bash
-# View all logs
-docker compose logs
-
-# Follow specific service logs
-docker compose logs -f mcp
+python splunk_to_csv.py --query "index=* | stats count by index sourcetype" --preview --preview-rows 10
 ```
 
-3. **Debugging**:
+## Supported Query Types
+
+The tool automatically handles various Splunk query formats:
+
+- **Simple searches**: `index=_audit user=admin`
+- **Statistical queries**: `index=* | stats count by sourcetype`
+- **REST API calls**: `| rest /services/data/indexes`
+- **Complex searches**: `search error | eval severity=if(match(_raw, "CRITICAL"), "high", "low") | stats count by severity`
+
+## Data Processing Features
+
+### Automatic Field Prioritization
+Common fields are automatically ordered first:
+- `_time`, `timestamp`, `time`
+- `user`, `action`, `info`
+- `host`, `source`, `sourcetype`, `index`
+
+### Data Type Handling
+- **Lists**: Converted to semicolon-separated strings
+- **Dictionaries**: Converted to JSON strings
+- **Null values**: Converted to empty strings
+- **Special characters**: Newlines and tabs are cleaned
+
+### File Size Optimization
+- Automatic file size reporting
+- Support for large datasets (10,000+ records)
+- Memory-efficient processing
+
+## Authentication Methods
+
+### Username/Password Authentication
 ```bash
-# Run with debug mode
-DEBUG=true docker compose up mcp
-
-# Access container shell
-docker compose exec mcp /bin/bash
+set SPLUNK_USERNAME=admin
+set SPLUNK_PASSWORD=your_password
 ```
 
-Note: If you're using Docker Compose V1, replace `docker compose` with `docker-compose` in the above commands.
-
-### Security Notes
-
-1. **Environment Variables**:
-- Never commit `.env` files
-- Use `.env.example` as a template
-- Consider using Docker secrets for production
-
-2. **SSL Verification**:
-- `VERIFY_SSL=true` recommended for production
-- Can be disabled for development/testing
-- Configure through environment variables
-
-3. **Port Exposure**:
-- Only expose necessary ports
-- Use internal Docker network when possible
-- Consider network security in production
-
-## Environment Variables
-
-Configure the following environment variables:
-- `SPLUNK_HOST`: Your Splunk host address
-- `SPLUNK_PORT`: Splunk management port (default: 8089)
-- `SPLUNK_USERNAME`: Your Splunk username
-- `SPLUNK_PASSWORD`: Your Splunk password
-- `SPLUNK_TOKEN`: (Optional) Splunk authentication token. If set, this will be used instead of username/password.
-- `SPLUNK_SCHEME`: Connection scheme (default: https)
-- `VERIFY_SSL`: Enable/disable SSL verification (default: true)
-- `FASTMCP_LOG_LEVEL`: Logging level (default: INFO)
-- `SERVER_MODE`: Server mode (sse, api, stdio) when using uvicorn
+### Token-Based Authentication
+```bash
+set SPLUNK_TOKEN=your_token_here
+# Username/password will be ignored when token is set
+```
 
 ### SSL Configuration
-
-The tool provides flexible SSL verification options:
-
-1. **Default (Secure) Mode**:
-```env
-VERIFY_SSL=true
-```
-- Full SSL certificate verification
-- Hostname verification enabled
-- Recommended for production environments
-
-2. **Relaxed Mode**:
-```env
-VERIFY_SSL=false
-```
-- SSL certificate verification disabled
-- Hostname verification disabled
-- Useful for testing or self-signed certificates
-
-## Testing
-
-The project includes comprehensive test coverage using pytest and end-to-end testing with a custom MCP client:
-
-### Running Tests
-
-Basic test execution:
 ```bash
-poetry run pytest
+set VERIFY_SSL=false  # For self-signed certificates
+set VERIFY_SSL=true   # For production environments
 ```
 
-With coverage reporting:
-```bash
-poetry run pytest --cov=splunk_mcp
+## File Output
+
+### CSV Format
+- UTF-8 with BOM encoding (Excel compatible)
+- Comma-separated values
+- Quoted fields for special characters
+- Header row with field names
+
+### File Naming
+If no output file is specified, files are auto-named:
 ```
+splunk_data_YYYYMMDD_HHMMSS.csv
+```
+
+## Error Handling
+
+The tool provides detailed error messages for common issues:
+
+- **Connection errors**: SSL, network, authentication
+- **Query errors**: Invalid syntax, permissions
+- **File errors**: Write permissions, disk space
+- **Data errors**: Malformed results, encoding issues
+
+## Performance Tips
+
+1. **Use specific time ranges** to limit data volume
+2. **Set appropriate max-results** for large datasets
+3. **Use preview mode** to test queries before full export
+4. **Filter data in Splunk** rather than post-processing
+
+## Troubleshooting
+
+### Common Issues
+
+**SSL Certificate Error**:
+```bash
+set VERIFY_SSL=false
+```
+
+**Authentication Failed**:
+- Check username/password or token
+- Verify Splunk server accessibility
+- Check user permissions
+
+**No Data Returned**:
+- Verify query syntax
+- Check time range
+- Confirm data exists in specified indexes
+
+**Large File Processing**:
+- Increase max-results gradually
+- Use time-based chunking for very large datasets
+- Consider using Splunk's native export features for massive datasets
+
+## Contributing
+
+Feel free to submit issues, feature requests, or pull requests to improve this tool.
+
+## License
+
+This project is open source and available under the MIT License.

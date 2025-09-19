@@ -1,0 +1,4 @@
+﻿_time,user,action,info,host,index,count,details
+2025-09-19T10:00:00.000+00:00,admin,login attempt,succeeded,splunk-server,_audit,1,"{""status"": ""ok"", ""reason"": ""valid_credentials""}"
+2025-09-19T10:01:00.000+00:00,admin,search,completed,splunk-server,_audit,2,"{""query"": ""index=_audit"", ""results"": 100}"
+2025-09-19T10:02:00.000+00:00,testuser,login attempt,failed,splunk-server,_audit,1,

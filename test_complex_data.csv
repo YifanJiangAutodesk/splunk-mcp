@@ -1,0 +1,3 @@
+﻿dict_field,list_field,null_field,simple_field,unicode_field
+"{""nested"": ""value"", ""number"": 42}",item1; item2; item3,,value1,Hello 世界 🌍
+"{""empty"": """"}",,,value2,Testing émojis 🚀

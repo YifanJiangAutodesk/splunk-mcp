@@ -4,6 +4,7 @@ import logging
 import os
 import ssl
 import traceback
+import csv
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 
@@ -892,6 +893,199 @@ async def ping() -> Dict[str, Any]:
             "status": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
+        }
+
+def normalize_csv_data(data: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """
+    Normalize data format for CSV export
+    
+    Args:
+        data: Raw search results from Splunk
+        
+    Returns:
+        List of normalized records with string values
+    """
+    if not data:
+        return []
+    
+    # Collect all possible fields
+    all_fields = set()
+    for record in data:
+        all_fields.update(record.keys())
+    
+    # Sort fields, prioritize common fields
+    priority_fields = ['_time', 'timestamp', 'time', 'user', 'action', 'info', 'host', 'source', 'sourcetype', 'index']
+    sorted_fields = []
+    
+    # Add priority fields first
+    for field in priority_fields:
+        if field in all_fields:
+            sorted_fields.append(field)
+            all_fields.remove(field)
+    
+    # Add remaining fields alphabetically
+    sorted_fields.extend(sorted(all_fields))
+    
+    # Normalize each record
+    normalized_data = []
+    for record in data:
+        normalized_record = {}
+        for field in sorted_fields:
+            value = record.get(field, "")
+            
+            # Handle special values
+            if isinstance(value, list):
+                value = "; ".join(str(v) for v in value)
+            elif isinstance(value, dict):
+                value = json.dumps(value, ensure_ascii=False)
+            elif value is None:
+                value = ""
+            else:
+                value = str(value)
+            
+            # Clean newlines and tabs
+            value = value.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+            normalized_record[field] = value
+        
+        normalized_data.append(normalized_record)
+    
+    return normalized_data
+
+def save_to_csv_file(data: List[Dict[str, str]], output_file: str, encoding: str = 'utf-8-sig') -> Dict[str, Any]:
+    """
+    Save normalized data to CSV file
+    
+    Args:
+        data: Normalized data records
+        output_file: Path to output CSV file
+        encoding: File encoding (default: utf-8-sig for Excel compatibility)
+        
+    Returns:
+        Dictionary with operation results
+    """
+    if not data:
+        return {
+            "success": False,
+            "error": "No data to save",
+            "file_path": output_file,
+            "rows": 0,
+            "fields": 0,
+            "file_size": 0
+        }
+    
+    try:
+        # Get field names
+        fieldnames = list(data[0].keys())
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_file), exist_ok=True) if os.path.dirname(output_file) else None
+        
+        # Write CSV file
+        with open(output_file, 'w', newline='', encoding=encoding) as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(data)
+        
+        # Get file size
+        file_size = os.path.getsize(output_file)
+        if file_size > 1024 * 1024:
+            size_str = f"{file_size / (1024 * 1024):.2f} MB"
+        elif file_size > 1024:
+            size_str = f"{file_size / 1024:.2f} KB"
+        else:
+            size_str = f"{file_size} bytes"
+        
+        return {
+            "success": True,
+            "file_path": output_file,
+            "rows": len(data),
+            "fields": len(fieldnames),
+            "field_names": fieldnames[:10],  # First 10 fields for preview
+            "file_size": file_size,
+            "file_size_str": size_str,
+            "encoding": encoding
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "file_path": output_file,
+            "rows": len(data) if data else 0,
+            "fields": 0,
+            "file_size": 0
+        }
+
+@mcp.tool()
+async def save_data_to_csv(data: List[Dict[str, Any]], output_file: str, encoding: str = "utf-8-sig") -> Dict[str, Any]:
+    """
+    Convert and save data to CSV file.
+    
+    This tool takes any structured data (like Splunk search results) and converts it to CSV format.
+    It automatically normalizes different data types and creates Excel-compatible CSV files.
+    
+    Args:
+        data: List of dictionaries containing the data to export
+        output_file: Path where the CSV file will be saved (relative to server or absolute)
+        encoding: CSV file encoding (default: utf-8-sig for Excel compatibility)
+        
+    Returns:
+        Dictionary containing:
+        - success: Whether the operation succeeded
+        - file_path: Path to the created CSV file
+        - rows: Number of data rows exported
+        - fields: Number of fields/columns
+        - field_names: Preview of field names (first 10)
+        - file_size: File size in bytes
+        - file_size_str: Human-readable file size
+        - encoding: File encoding used
+        - error: Error message if operation failed
+        
+    Example:
+        # First get data from a search
+        search_results = await search_splunk("index=_audit")
+        # Then save to CSV
+        result = await save_data_to_csv(search_results, "audit_data.csv")
+    """
+    logger.info(f"💾 Starting CSV export for {len(data) if data else 0} records to {output_file}")
+    
+    try:
+        if not data:
+            return {
+                "success": False,
+                "error": "No data provided to save",
+                "file_path": output_file,
+                "rows": 0,
+                "fields": 0,
+                "file_size": 0
+            }
+        
+        # Normalize data for CSV
+        logger.info(f"📊 Normalizing {len(data)} records for CSV export")
+        normalized_data = normalize_csv_data(data)
+        
+        # Save to CSV file
+        logger.info(f"💾 Saving data to CSV file: {output_file}")
+        save_result = save_to_csv_file(normalized_data, output_file, encoding)
+        
+        if save_result["success"]:
+            logger.info(f"✅ Successfully exported {save_result['rows']} rows to {output_file}")
+            logger.info(f"📄 File size: {save_result['file_size_str']}, Fields: {save_result['fields']}")
+        else:
+            logger.error(f"❌ Failed to save CSV file: {save_result['error']}")
+        
+        return save_result
+        
+    except Exception as e:
+        error_msg = f"CSV export failed: {str(e)}"
+        logger.error(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg,
+            "file_path": output_file,
+            "rows": len(data) if data else 0,
+            "fields": 0,
+            "file_size": 0
         }
 
 if __name__ == "__main__":

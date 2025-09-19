@@ -1,0 +1,19 @@
+﻿user,action,count
+n/a,add,10393
+admin,login attempt,171
+admin,search,66
+splunk-system-user,search,50
+splunk-system-user,artifact_deleted,24
+admin,quota,17
+n/a,update,10
+splunk-system-user,GET_PASSWORD,9
+n/a,read_session_token,9
+splunk-system-user,CREATE_PASSWORD,7
+splunk-system-user,quota,6
+n/a,expired_session_token,3
+admin,accelerate_search,2
+admin,edit_token_http,2
+admin,create,1
+admin,edit,1
+admin,list_token_http,1
+n/a,splunkStarting,1
