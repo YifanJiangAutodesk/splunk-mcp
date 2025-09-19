@@ -46,8 +46,6 @@ app = FastAPI(
 # Initialize the MCP server
 mcp = FastMCP(
     "splunk",
-    description="A FastMCP-based tool for interacting with Splunk Enterprise/Cloud through natural language",
-    version="0.3.0",
     host="0.0.0.0",  # Listen on all interfaces
     port=FASTMCP_PORT
 )
